@@ -1,17 +1,15 @@
-#include <igl/AABB.h>
-#include <igl/barycentric_coordinates.h>
-#include <igl/read_triangle_mesh.h>
-
 #include <Eigen/Core>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <cmath>
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <polatory/isosurface/mesh.hpp>
+#include <polatory/isosurface/triangle.hpp>
 #include <polatory/polatory.hpp>
-#include <stdexcept>
 #include <utility>
 
+#include "face_tree.hpp"
 #include "parse_options.hpp"
 
 using polatory::Index;
@@ -25,10 +23,12 @@ using polatory::geometry::Bbox3;
 using polatory::geometry::Point3;
 using polatory::geometry::Points3;
 using polatory::geometry::Vector3;
+using polatory::isosurface::barycentric_coordinates;
 using polatory::isosurface::Face;
 using polatory::isosurface::Faces;
 using polatory::isosurface::FieldFunction;
 using polatory::isosurface::Isosurface;
+using polatory::isosurface::read_obj;
 using polatory::rbf::Biharmonic3D;
 
 class SignedDistanceField {
@@ -45,9 +45,7 @@ class SignedDistanceField {
 
  public:
   SignedDistanceField(Points3&& vertices, Faces&& faces)
-      : vertices_(std::move(vertices)), faces_(std::move(faces)) {
-    tree_.init(vertices_, faces_);
-
+      : vertices_(std::move(vertices)), faces_(std::move(faces)), tree_(vertices_, faces_) {
     for (auto f : faces_.rowwise()) {
       for (auto i = 0; i < 3; i++) {
         auto j = (i + 1) % 3;
@@ -75,17 +73,16 @@ class SignedDistanceField {
     for (Index i = 0; i < points.rows(); i++) {
       Point3 p = points.row(i);
 
-      int fi{};
+      Index fi{};
       Point3 closest_point;
-      auto d2 = tree_.squared_distance(vertices_, faces_, p, fi, closest_point);
+      auto d2 = tree_.squared_distance(p, fi, closest_point);
 
       Face f = faces_.row(fi);
       Point3 a = vertices_.row(f(0));
       Point3 b = vertices_.row(f(1));
       Point3 c = vertices_.row(f(2));
 
-      Vector3 l;
-      igl::barycentric_coordinates(closest_point, a, b, c, l);
+      Vector3 l = barycentric_coordinates(closest_point, a, b, c);
 
       auto boundary = false;
       for (auto i = 0; i < 3; i++) {
@@ -116,7 +113,7 @@ class SignedDistanceField {
  private:
   Points3 vertices_;
   Faces faces_;
-  igl::AABB<Points3, 3> tree_;
+  FaceTree tree_;
   boost::unordered_flat_set<Halfedge, HalfedgeHash> boundary_;
   boost::unordered_flat_set<Index> boundary_vertices_;
 };
@@ -155,11 +152,9 @@ int main(int argc, const char* argv[]) {
     VecX sides = table.col(3);
 
     // Load the mesh.
-    Points3 V;
-    Faces F;
-    if (!igl::read_triangle_mesh(opts.mesh_in, V, F)) {
-      throw std::runtime_error("failed to read the mesh file");
-    }
+    auto mesh = read_obj(opts.mesh_in);
+    Points3 V = mesh.vertices();
+    Faces F = mesh.faces();
 
     SignedDistanceField sdf(std::move(V), std::move(F));
     auto [C, D] = sdf(points);

@@ -4,6 +4,7 @@
 .vscode/
 *.egg-info/
 build/
+buildd/
 data/
 .DS_Store
 .RData

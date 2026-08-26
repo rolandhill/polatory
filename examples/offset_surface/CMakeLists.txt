@@ -4,7 +4,6 @@ add_executable(${TARGET} main.cpp)
 
 target_link_libraries(${TARGET} PRIVATE
     Boost::program_options
-    igl::igl_core
     polatory
 )
 

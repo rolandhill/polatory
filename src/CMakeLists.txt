@@ -83,12 +83,6 @@ target_link_libraries(${TARGET} PUBLIC
     OpenMP::OpenMP_CXX
 )
 
-# igl is used only by isosurface/snap.cpp (closest-point queries); keep it private
-# so it does not leak into the public interface.
-target_link_libraries(${TARGET} PRIVATE
-    igl::igl_core
-)
-
 include(ExternalProject)
 
 set(SCALFMM_CMAKE_ARGS

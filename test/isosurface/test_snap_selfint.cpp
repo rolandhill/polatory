@@ -1,6 +1,4 @@
 #include <gtest/gtest.h>
-#include <igl/readOBJ.h>
-#include <igl/tri_tri_intersect.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -28,10 +26,10 @@ using polatory::geometry::Bbox3;
 using polatory::geometry::Point3;
 using polatory::geometry::Points3;
 using polatory::geometry::Vector3;
-using polatory::isosurface::Faces;
 using polatory::isosurface::FieldFunction;
 using polatory::isosurface::Isosurface;
 using polatory::isosurface::Mesh;
+using polatory::isosurface::read_obj;
 using polatory::isosurface::snap_mesh;
 
 namespace {
@@ -53,6 +51,34 @@ class SignedDistanceFromSphere : public FieldFunction {
   double radius_;
 };
 
+// Whether segment [p, q] meets triangle (a, b, c), by Moller-Trumbore. A segment exactly
+// parallel to the triangle's plane counts as a miss.
+bool segment_triangle_intersect(const Eigen::Vector3d& p, const Eigen::Vector3d& q,
+                                const Eigen::Vector3d& a, const Eigen::Vector3d& b,
+                                const Eigen::Vector3d& c) {
+  Eigen::Vector3d dir = q - p;
+  Eigen::Vector3d ab = b - a;
+  Eigen::Vector3d ac = c - a;
+  Eigen::Vector3d h = dir.cross(ac);
+  auto det = ab.dot(h);
+  if (det == 0.0) {
+    return false;
+  }
+  auto inv_det = 1.0 / det;
+  Eigen::Vector3d ap = p - a;
+  auto u = inv_det * ap.dot(h);
+  if (u < 0.0 || u > 1.0) {
+    return false;
+  }
+  Eigen::Vector3d k = ap.cross(ab);
+  auto v = inv_det * dir.dot(k);
+  if (v < 0.0 || u + v > 1.0) {
+    return false;
+  }
+  auto w = inv_det * ac.dot(k);
+  return w >= 0.0 && w <= 1.0;
+}
+
 // Whether triangles s and t actually intersect, in the same sense as the snapper's
 // check: a clearly non-parallel pair by a 3D crossing test; a near-parallel pair only
 // when one triangle crosses the other's plane within the overlap (a back-to-back fold).
@@ -64,7 +90,15 @@ bool triangles_intersect(const std::array<Eigen::Vector3d, 3>& s,
     return false;
   }
   if (std::abs(ns.dot(nt)) < 0.99 * ns.norm() * nt.norm()) {
-    return igl::tri_tri_overlap_test_3d(s[0], s[1], s[2], t[0], t[1], t[2]);
+    // Non-parallel triangles meet iff an edge of one crosses the other.
+    for (auto e = 0; e < 3; e++) {
+      auto f = (e + 1) % 3;
+      if (segment_triangle_intersect(s.at(e), s.at(f), t[0], t[1], t[2]) ||
+          segment_triangle_intersect(t.at(e), t.at(f), s[0], s[1], s[2])) {
+        return true;
+      }
+    }
+    return false;
   }
   Eigen::Vector3d normal = ns.normalized();
   double dmin = 1e30;
@@ -196,15 +230,6 @@ Points3 plane_points(double radius, Index n, double offset) {
     points.row(i) << r * std::cos(phi), r * std::sin(phi), sign * offset;
   }
   return points;
-}
-
-Mesh read_obj(const std::string& path) {
-  Eigen::MatrixXd v;
-  Eigen::MatrixXi f;
-  EXPECT_TRUE(igl::readOBJ(path, v, f)) << "cannot read " << path;
-  Points3 vertices = v;
-  Faces faces = f.cast<Index>();
-  return {std::move(vertices), std::move(faces)};
 }
 
 Points3 read_xyz(const std::string& path) {

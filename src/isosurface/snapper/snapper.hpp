@@ -1,7 +1,5 @@
 #pragma once
 
-#include <igl/barycentric_coordinates.h>
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -213,8 +211,7 @@ class Snapper {
       Point3 b = V.row(f(1));
       Point3 c = V.row(f(2));
 
-      Vector3 l;
-      igl::barycentric_coordinates(best_aq, a, b, c, l);
+      Vector3 l = barycentric_coordinates(best_aq, a, b, c);
 
       // The centroid of each simplex, indexed by Simplex (vertices, edge midpoints, face).
       std::array<Point3, 7> sites{

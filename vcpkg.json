@@ -21,7 +21,6 @@
       "platform": "osx & arm64"
     },
     "gtest",
-    "libigl",
     {
       "name": "intel-mkl",
       "platform": "(windows | linux | osx) & x64"
