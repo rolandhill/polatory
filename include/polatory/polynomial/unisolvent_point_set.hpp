@@ -15,9 +15,9 @@ namespace polatory::polynomial {
 template <int Dim>
 class UnisolventPointSet {
   static constexpr int kDim = Dim;
-  using LagrangeBasis = LagrangeBasis<kDim>;
+  using LagrangeBasis = polynomial::LagrangeBasis<kDim>;
   using Points = geometry::Points<kDim>;
-  using PolynomialBasisBase = PolynomialBasisBase<kDim>;
+  using PolynomialBasisBase = polynomial::PolynomialBasisBase<kDim>;
 
   static constexpr int kNumTrials = 100;
 

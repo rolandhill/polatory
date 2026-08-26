@@ -14,7 +14,7 @@ namespace polatory::interpolation {
 template <int Dim>
 class DirectEvaluator {
   static constexpr int kDim = Dim;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using MonomialBasis = polynomial::MonomialBasis<kDim>;
   using Points = geometry::Points<kDim>;
   using PolynomialEvaluator = polynomial::PolynomialEvaluator<MonomialBasis>;

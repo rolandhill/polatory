@@ -27,10 +27,10 @@ class InequalityFitter {
   static constexpr double kInfinity = std::numeric_limits<double>::infinity();
   using Bbox = geometry::Bbox<kDim>;
   using DistanceFilter = point_cloud::DistanceFilter<kDim>;
-  using Evaluator = Evaluator<kDim>;
-  using Model = Model<kDim>;
+  using Evaluator = interpolation::Evaluator<kDim>;
+  using Model = polatory::Model<kDim>;
   using Points = geometry::Points<kDim>;
-  using Solver = Solver<kDim>;
+  using Solver = interpolation::Solver<kDim>;
 
  public:
   InequalityFitter(const Model& model, const Points& points)

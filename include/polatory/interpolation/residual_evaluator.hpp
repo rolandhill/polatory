@@ -27,9 +27,9 @@ template <int Dim>
 class ResidualEvaluator {
   static constexpr int kDim = Dim;
   using Bbox = geometry::Bbox<kDim>;
-  using DirectEvaluator = DirectEvaluator<kDim>;
+  using DirectEvaluator = interpolation::DirectEvaluator<kDim>;
   using Evaluator = SymmetricEvaluator<kDim>;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using Points = geometry::Points<kDim>;
 
   static constexpr Index kDirectEvaluatorTargetSize = 1024;

@@ -11,7 +11,7 @@ namespace polatory::isosurface {
 
 class RbfFieldFunction25D : public FieldFunction {
   static constexpr double kInfinity = std::numeric_limits<double>::infinity();
-  using Interpolant = Interpolant<2>;
+  using Interpolant = polatory::Interpolant<2>;
 
  public:
   explicit RbfFieldFunction25D(Interpolant& interpolant, double accuracy = kInfinity,

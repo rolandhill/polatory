@@ -21,7 +21,7 @@ class Evaluator {
   static constexpr double kInfinity = std::numeric_limits<double>::infinity();
   using Bbox = geometry::Bbox<kDim>;
   using FmmGenericEvaluatorPtr = fmm::FmmGenericEvaluatorPtr<kDim>;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using MonomialBasis = polynomial::MonomialBasis<kDim>;
   using Points = geometry::Points<kDim>;
   using PolynomialEvaluator = polynomial::PolynomialEvaluator<MonomialBasis>;

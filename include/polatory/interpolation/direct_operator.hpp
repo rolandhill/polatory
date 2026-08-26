@@ -15,7 +15,7 @@ namespace polatory::interpolation {
 template <int Dim>
 class DirectOperator : public krylov::LinearOperator {
   static constexpr int kDim = Dim;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using MonomialBasis = polynomial::MonomialBasis<kDim>;
   using Points = geometry::Points<kDim>;
   using Vector = geometry::Vector<kDim>;

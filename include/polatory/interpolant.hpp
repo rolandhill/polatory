@@ -32,7 +32,7 @@ class Interpolant {
   using Fitter = interpolation::Fitter<kDim>;
   using IncrementalFitter = interpolation::IncrementalFitter<kDim>;
   using InequalityFitter = interpolation::InequalityFitter<kDim>;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using Point = geometry::Point<kDim>;
   using Points = geometry::Points<kDim>;
 

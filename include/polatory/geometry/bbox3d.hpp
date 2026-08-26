@@ -9,10 +9,10 @@ namespace polatory::geometry {
 
 template <int Dim>
 class Bbox {
-  using Mat = Mat<Dim>;
-  using Point = Point<Dim>;
-  using Points = Points<Dim>;
-  using Vector = Vector<Dim>;
+  using Mat = polatory::Mat<Dim>;
+  using Point = geometry::Point<Dim>;
+  using Points = geometry::Points<Dim>;
+  using Vector = geometry::Vector<Dim>;
 
  public:
   Bbox()

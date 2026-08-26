@@ -19,7 +19,7 @@ template <int Dim>
 class DomainDivider {
   static constexpr int kDim = Dim;
   using Bbox = geometry::Bbox<kDim>;
-  using Domain = Domain<kDim>;
+  using Domain = preconditioner::Domain<kDim>;
   using Point = geometry::Point<kDim>;
   using Points = geometry::Points<kDim>;
 

@@ -36,8 +36,8 @@ namespace polatory::preconditioner {
 template <int Dim>
 class FineGrid {
   static constexpr int kDim = Dim;
-  using Domain = Domain<kDim>;
-  using Model = Model<kDim>;
+  using Domain = preconditioner::Domain<kDim>;
+  using Model = polatory::Model<kDim>;
   using Points = geometry::Points<kDim>;
 
  public:

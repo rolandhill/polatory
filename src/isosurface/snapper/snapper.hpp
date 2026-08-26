@@ -175,7 +175,6 @@ class Snapper {
     std::vector<Candidate> candidates;
     candidates.reserve(np_);
     for (Index i = 0; i < np_; i++) {
-      Point3 p = p_.row(i);
       Point3 ap = ap_.row(i);
 
       // The nearest face within max_distance; classification skips anything farther, so a

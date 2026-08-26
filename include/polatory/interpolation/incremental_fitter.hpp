@@ -27,10 +27,10 @@ class IncrementalFitter {
   static constexpr int kDim = Dim;
   using Bbox = geometry::Bbox<kDim>;
   using DistanceFilter = point_cloud::DistanceFilter<kDim>;
-  using Evaluator = Evaluator<kDim>;
-  using Model = Model<kDim>;
+  using Evaluator = interpolation::Evaluator<kDim>;
+  using Model = polatory::Model<kDim>;
   using Points = geometry::Points<kDim>;
-  using Solver = Solver<kDim>;
+  using Solver = interpolation::Solver<kDim>;
   using Vectors = geometry::Vectors<kDim>;
 
  public:

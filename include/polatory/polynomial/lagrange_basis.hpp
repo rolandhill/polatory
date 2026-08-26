@@ -18,7 +18,7 @@ class LagrangeBasis : public PolynomialBasisBase<Dim> {
 
  private:
   using Base = PolynomialBasisBase<kDim>;
-  using MonomialBasis = MonomialBasis<kDim>;
+  using MonomialBasis = polynomial::MonomialBasis<kDim>;
   using Points = geometry::Points<kDim>;
 
  public:

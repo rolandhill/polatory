@@ -12,7 +12,7 @@ namespace polatory::kriging {
 
 template <int Dim>
 class VariogramSet {
-  using Variogram = Variogram<Dim>;
+  using Variogram = kriging::Variogram<Dim>;
 
  public:
   explicit VariogramSet(std::vector<Variogram>&& variograms) : variograms_{std::move(variograms)} {}

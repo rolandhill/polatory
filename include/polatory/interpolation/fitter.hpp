@@ -10,9 +10,9 @@ namespace polatory::interpolation {
 template <int Dim>
 class Fitter {
   static constexpr int kDim = Dim;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using Points = geometry::Points<kDim>;
-  using Solver = Solver<kDim>;
+  using Solver = interpolation::Solver<kDim>;
 
  public:
   Fitter(const Model& model, const Points& points, const Points& grad_points)

@@ -18,7 +18,7 @@ class RbfBase {
   static constexpr int kDim = Dim;
 
  protected:
-  using Mat = Mat<Dim>;
+  using Mat = polatory::Mat<Dim>;
   using RbfPtr = std::unique_ptr<RbfBase<Dim>>;
   using Vector = geometry::Vector<Dim>;
 

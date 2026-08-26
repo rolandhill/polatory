@@ -11,7 +11,7 @@ namespace polatory::rbf {
 template <int Dim>
 class Rbf {
   static constexpr int kDim = Dim;
-  using Mat = Mat<Dim>;
+  using Mat = polatory::Mat<Dim>;
   using RbfBase = internal::RbfBase<Dim>;
   using Vector = geometry::Vector<Dim>;
 

@@ -11,7 +11,7 @@ template <int Dim, class DerivedPoints, class DerivedGradPoints>
 MatX mat_a(const Model<Dim>& model, const Eigen::MatrixBase<DerivedPoints>& points,
            const Eigen::MatrixBase<DerivedGradPoints>& grad_points) {
   constexpr int kDim = Dim;
-  using Mat = Mat<kDim>;
+  using Mat = polatory::Mat<kDim>;
   using Vector = geometry::Vector<kDim>;
 
   auto mu = points.rows();

@@ -19,9 +19,9 @@ namespace polatory::kriging {
 template <>
 class VariogramFitting<3> {
   using Mat = Mat3;
-  using Model = Model<3>;
-  using Variogram = Variogram<3>;
-  using VariogramSet = VariogramSet<3>;
+  using Model = polatory::Model<3>;
+  using Variogram = kriging::Variogram<3>;
+  using VariogramSet = kriging::VariogramSet<3>;
 
  public:
   VariogramFitting(const VariogramSet& variog_set, const Model& model,

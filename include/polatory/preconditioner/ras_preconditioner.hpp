@@ -36,13 +36,13 @@ template <int Dim>
 class RasPreconditioner : public krylov::LinearOperator {
   static constexpr int kDim = Dim;
   using Bbox = geometry::Bbox<kDim>;
-  using CoarseGrid = CoarseGrid<kDim>;
-  using Domain = Domain<kDim>;
-  using DomainDivider = DomainDivider<kDim>;
+  using CoarseGrid = preconditioner::CoarseGrid<kDim>;
+  using Domain = preconditioner::Domain<kDim>;
+  using DomainDivider = preconditioner::DomainDivider<kDim>;
   using Evaluator = interpolation::Evaluator<kDim>;
-  using FineGrid = FineGrid<kDim>;
+  using FineGrid = preconditioner::FineGrid<kDim>;
   using LagrangeBasis = polynomial::LagrangeBasis<kDim>;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using MonomialBasis = polynomial::MonomialBasis<kDim>;
   using Points = geometry::Points<kDim>;
   using SymmetricEvaluator = interpolation::SymmetricEvaluator<kDim>;

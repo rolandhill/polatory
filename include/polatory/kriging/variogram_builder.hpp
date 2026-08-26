@@ -15,7 +15,7 @@ template <int Dim>
 class VariogramBuilder {
   static constexpr int kDim = Dim;
   using Point = geometry::Point<kDim>;
-  using Variogram = Variogram<kDim>;
+  using Variogram = kriging::Variogram<kDim>;
   using Vector = geometry::Vector<Dim>;
 
  public:

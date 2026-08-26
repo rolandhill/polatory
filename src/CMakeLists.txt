@@ -44,6 +44,12 @@ add_library(${TARGET} STATIC
 
 if(UNIX)
     target_compile_options(${TARGET} PUBLIC -fPIC -Wall -Wextra -Werror)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC 15 reports a false positive when it inlines the std::sort in ScalFMM's M2L
+        # interaction list (scalfmm/tree/utils.hpp): it cannot prove the runtime counter stays
+        # within the fixed-size permutation array. Keep it a warning rather than an error.
+        target_compile_options(${TARGET} PRIVATE -Wno-error=array-bounds)
+    endif()
     # target_compile_options(${TARGET} PUBLIC -g -fno-omit-frame-pointer -fsanitize=address)
     # target_compile_options(${TARGET} PUBLIC -g -fno-omit-frame-pointer -fsanitize=undefined)
 elseif(MSVC)

@@ -9,7 +9,7 @@ namespace polatory::common {
 template <int Dim>
 struct Read<rbf::Rbf<Dim>> {
   void operator()(std::istream& is, rbf::Rbf<Dim>& t) const {
-    using Mat = Mat<Dim>;
+    using Mat = polatory::Mat<Dim>;
 
     std::string short_name;
     read(is, short_name);

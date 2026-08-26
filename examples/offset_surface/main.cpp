@@ -119,7 +119,7 @@ class SignedDistanceField {
 };
 
 class OffsetFieldFunction : public FieldFunction {
-  using Interpolant = Interpolant<3>;
+  using Interpolant = polatory::Interpolant<3>;
 
  public:
   explicit OffsetFieldFunction(Interpolant& interpolant, const SignedDistanceField& sdf,

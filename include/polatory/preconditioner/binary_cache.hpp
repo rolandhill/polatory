@@ -8,6 +8,8 @@
 #endif
 
 #include <boost/filesystem.hpp>
+#include <cerrno>
+#include <cstddef>
 #include <format>
 #include <mutex>
 #include <stdexcept>
@@ -65,7 +67,7 @@ class BinaryCache {
     ::ReadFile(file_, data, record.size, nullptr, nullptr);
 #else
     ::lseek(file_, static_cast<::off_t>(record.offset), SEEK_SET);
-    ::read(file_, data, record.size);
+    read_all(file_, data, record.size);
 #endif
   }
 
@@ -79,7 +81,7 @@ class BinaryCache {
     ::WriteFile(file_, data, size, nullptr, nullptr);
 #else
     ::lseek(file_, 0, SEEK_END);
-    ::write(file_, data, size);
+    write_all(file_, data, size);
 #endif
 
     auto id = records_.size();
@@ -93,6 +95,40 @@ class BinaryCache {
     std::size_t offset{};
     std::size_t size{};
   };
+
+#ifndef _WIN32
+  // read(2) and write(2) may transfer fewer bytes than requested, so loop until the whole
+  // record is done.
+  static void read_all(int file, void* data, std::size_t size) {
+    auto* p = static_cast<std::byte*>(data);
+    while (size > 0) {
+      auto n = ::read(file, p, size);
+      if (n < 0 && errno == EINTR) {
+        continue;
+      }
+      if (n <= 0) {
+        throw std::runtime_error("failed to read from the temporary file");
+      }
+      p += n;
+      size -= static_cast<std::size_t>(n);
+    }
+  }
+
+  static void write_all(int file, const void* data, std::size_t size) {
+    const auto* p = static_cast<const std::byte*>(data);
+    while (size > 0) {
+      auto n = ::write(file, p, size);
+      if (n < 0 && errno == EINTR) {
+        continue;
+      }
+      if (n <= 0) {
+        throw std::runtime_error("failed to write to the temporary file");
+      }
+      p += n;
+      size -= static_cast<std::size_t>(n);
+    }
+  }
+#endif
 
 #ifdef _WIN32
   HANDLE file_{};

@@ -23,12 +23,12 @@ template <int Dim>
 class Solver {
   static constexpr int kDim = Dim;
   using Bbox = geometry::Bbox<kDim>;
-  using Model = Model<kDim>;
+  using Model = polatory::Model<kDim>;
   using MonomialBasis = polynomial::MonomialBasis<kDim>;
-  using Operator = Operator<kDim>;
+  using Operator = interpolation::Operator<kDim>;
   using Points = geometry::Points<kDim>;
   using Preconditioner = preconditioner::RasPreconditioner<kDim>;
-  using ResidualEvaluator = ResidualEvaluator<kDim>;
+  using ResidualEvaluator = interpolation::ResidualEvaluator<kDim>;
 
  public:
   Solver(const Model& model, const Points& points, const Points& grad_points, double accuracy,

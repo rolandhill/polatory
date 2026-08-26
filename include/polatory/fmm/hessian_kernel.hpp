@@ -20,7 +20,7 @@ struct HessianKernel {
   template <class OtherRbf>
   using Rebind = HessianKernel<OtherRbf>;
 
-  using Mat = Mat<kDim>;
+  using Mat = polatory::Mat<kDim>;
   using Vector = geometry::Vector<kDim>;
 
   static constexpr auto homogeneity_tag{scalfmm::matrix_kernels::homogeneity::non_homogenous};
