@@ -42,9 +42,9 @@ find_package(OpenMP REQUIRED)
 
 set(VCPKG_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 
-if(${VCPKG_TARGET_TRIPLET} MATCHES ^x64-)
+if(MKL_FOUND)
     set(USE_MKL ON)
-else()
+elseif(APPLE)
     set(BLA_VENDOR "Apple")
 endif()
 

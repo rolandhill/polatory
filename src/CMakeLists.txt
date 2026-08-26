@@ -106,8 +106,16 @@ if(USE_MKL)
         -DEIGEN_USE_BLAS
     )
 
+    # MKL's FFTW wrapper headers: under vcpkg they land in the installed tree,
+    # under a system oneAPI install they sit next to the other MKL headers.
+    if(MKL_ROOT)
+        set(MKL_FFTW_INCLUDE_DIR "${MKL_ROOT}/include/fftw")
+    else()
+        set(MKL_FFTW_INCLUDE_DIR "${VCPKG_DIR}/include/fftw")
+    endif()
+
     target_include_directories(${TARGET} PUBLIC
-        ${VCPKG_DIR}/include/fftw
+        ${MKL_FFTW_INCLUDE_DIR}
     )
 
     target_link_libraries(${TARGET} PUBLIC
