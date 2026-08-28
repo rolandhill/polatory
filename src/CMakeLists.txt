@@ -158,6 +158,8 @@ externalproject_add(
     GIT_TAG polatory
     GIT_SHALLOW ON
     GIT_REMOTE_UPDATE_STRATEGY CHECKOUT
+    PATCH_COMMAND ${CMAKE_COMMAND} -DSCALFMM_SOURCE_DIR=<SOURCE_DIR>
+                  -P ${CMAKE_SOURCE_DIR}/cmake/patch_scalfmm.cmake
     CMAKE_ARGS ${SCALFMM_CMAKE_ARGS}
 )
 
