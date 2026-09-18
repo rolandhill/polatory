@@ -16,16 +16,12 @@
     "ceres",
     "eigen3",
     "fast-float",
-    {
-      "name": "fftw3",
-      "platform": "osx & arm64"
-    },
     "gtest",
+    "nanoflann",
     {
-      "name": "intel-mkl",
-      "platform": "(windows | linux | osx) & x64"
-    },
-    "nanoflann"
+      "name": "openblas",
+      "platform": "!osx"
+    }
   ],
   "features": {
     "python": {

@@ -21,45 +21,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(polatory_target_contents)
 
-set(MKL_ARCH "intel64")
-if(UNIX)
-    set(MKL_LINK "static")
-elseif(MSVC)
-    set(MKL_LINK "dynamic")
+# BLAS backend. Polatory ships under MIT and wants a permissively licensed dependency closure,
+# so the default is OpenBLAS (BSD-3-Clause) rather than Intel MKL (proprietary). Selecting it
+# through BLA_VENDOR keeps FindBLAS portable across system packages, Homebrew and vcpkg, and the
+# same vendor is handed down to the ScalFMM sub-build; see src/CMakeLists.txt.
+if(NOT DEFINED BLA_VENDOR)
+    if(APPLE)
+        set(BLA_VENDOR "Apple")
+    else()
+        set(BLA_VENDOR "OpenBLAS")
+    endif()
 endif()
-set(MKL_THREADING "sequential")
-set(MKL_INTERFACE "lp64")
 
+find_package(BLAS REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem program_options)
 find_package(Ceres CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(FastFloat CONFIG REQUIRED)
-find_package(FFTW3 CONFIG)
 find_package(GTest CONFIG REQUIRED)
-find_package(MKL CONFIG)
 find_package(nanoflann CONFIG REQUIRED)
 find_package(OpenMP REQUIRED)
-
-set(VCPKG_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-
-if(MKL_FOUND)
-    set(USE_MKL ON)
-elseif(APPLE)
-    set(BLA_VENDOR "Apple")
-endif()
-
-if(MSVC AND USE_MKL)
-    # DLLs not copied by MKL::MKL
-    # https://www.intel.com/content/www/us/en/develop/documentation/onemkl-windows-developer-guide/top/appendix-c-directory-structure-in-detail/structure-of-the-intel-64-architecture-directories/contents-of-the-redist-intel64-directory.html
-    set(POLATORY_DLLS
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_def.2.dll
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_mc.2.dll
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_mc3.2.dll
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_avx.2.dll
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_avx2.2.dll
-        ${VCPKG_DIR}/$<$<CONFIG:Debug>:debug>/bin/mkl_avx512.2.dll
-    )
-endif()
 
 add_subdirectory(src)
 

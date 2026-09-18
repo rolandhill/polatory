@@ -92,8 +92,8 @@ target_link_libraries(${TARGET} PUBLIC
 include(ExternalProject)
 
 set(SCALFMM_CMAKE_ARGS
-    -DCMAKE_TOOLCHAIN_FILE=${PROJECT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake
     -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/scalfmm/install
+    -DBLA_VENDOR=${BLA_VENDOR}
     -Dscalfmm_BUILD_CHECK=OFF
     -Dscalfmm_BUILD_EXAMPLES=OFF
     -Dscalfmm_BUILD_TOOLS=OFF
@@ -106,43 +106,20 @@ if(MSVC)
     )
 endif()
 
-if(USE_MKL)
-    target_compile_definitions(${TARGET} PUBLIC
-        # -DEIGEN_USE_MKL_ALL
-        -DEIGEN_USE_BLAS
-    )
+# Eigen's BLAS backend, and the raw Fortran BLAS/LAPACK symbols that ScalFMM's bundled
+# xtensor-blas calls through xflens. The FFT ScalFMM needs is vendored into its own headers by
+# cmake/patch_scalfmm.cmake, so nothing here has to supply an FFTW.
+target_compile_definitions(${TARGET} PUBLIC
+    -DEIGEN_USE_BLAS
+)
 
-    # MKL's FFTW wrapper headers: under vcpkg they land in the installed tree,
-    # under a system oneAPI install they sit next to the other MKL headers.
-    if(MKL_ROOT)
-        set(MKL_FFTW_INCLUDE_DIR "${MKL_ROOT}/include/fftw")
-    else()
-        set(MKL_FFTW_INCLUDE_DIR "${VCPKG_DIR}/include/fftw")
-    endif()
-
-    target_include_directories(${TARGET} PUBLIC
-        ${MKL_FFTW_INCLUDE_DIR}
-    )
-
-    target_link_libraries(${TARGET} PUBLIC
-        $<LINK_ONLY:MKL::MKL>
-    )
-
-    list(APPEND SCALFMM_CMAKE_ARGS
-        -Dscalfmm_USE_MKL=ON
-    )
-elseif(APPLE)
-    target_compile_definitions(${TARGET} PUBLIC
-        -DEIGEN_USE_BLAS
-    )
-
+if(APPLE)
     target_link_libraries(${TARGET} INTERFACE
         "-framework Accelerate"
-        FFTW3::fftw3
     )
-
-    list(APPEND SCALFMM_CMAKE_ARGS
-        -DBLA_VENDOR=Apple
+else()
+    target_link_libraries(${TARGET} PUBLIC
+        $<LINK_ONLY:BLAS::BLAS>
     )
 endif()
 
@@ -159,6 +136,7 @@ externalproject_add(
     GIT_SHALLOW ON
     GIT_REMOTE_UPDATE_STRATEGY CHECKOUT
     PATCH_COMMAND ${CMAKE_COMMAND} -DSCALFMM_SOURCE_DIR=<SOURCE_DIR>
+                  -DPOLATORY_SOURCE_DIR=${PROJECT_SOURCE_DIR}
                   -P ${CMAKE_SOURCE_DIR}/cmake/patch_scalfmm.cmake
     CMAKE_ARGS ${SCALFMM_CMAKE_ARGS}
 )
