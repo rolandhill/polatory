@@ -2,15 +2,15 @@
 #include <Eigen/LU>
 #include <algorithm>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <polatory/isosurface/mesh_defects_finder.hpp>
-#include <polatory/types.hpp>
+#include <jizai/isosurface/mesh_defects_finder.hpp>
+#include <jizai/types.hpp>
 #include <utility>
 
 #include "dense_undirected_graph.hpp"
 #include "face_grid.hpp"
 #include "utility.hpp"
 
-namespace polatory::isosurface {
+namespace jizai::isosurface {
 
 MeshDefectsFinder::MeshDefectsFinder(const Mesh& mesh, double resolution)
     : vertices_(mesh.vertices()),
@@ -100,18 +100,17 @@ std::vector<Index> MeshDefectsFinder::singular_vertices() const {
 
       auto order = static_cast<Index>(to_local_vi.size());
 
-      // The graph that represents the link complex of the vertex.
-      DenseUndirectedGraph g(order);
+      DenseUndirectedGraph link(order);
 
       for (auto fi : fis) {
         auto i = to_local_vi.at(next_vertex(fi, vi));
         auto j = to_local_vi.at(prev_vertex(fi, vi));
-        g.add_edge(i, j);
+        link.add_edge(i, j);
       }
 
       // Check if the graph is a cycle or a path (in case of a boundary vertex).
       // NOLINTNEXTLINE(readability-simplify-boolean-expr)
-      if (!(g.is_simple() && g.is_connected() && g.max_degree() <= 2)) {
+      if (!(link.is_simple() && link.is_connected() && link.max_degree() <= 2)) {
         local_result.push_back(vi);
       }
     }
@@ -145,4 +144,4 @@ Index MeshDefectsFinder::prev_vertex(Index fi, Index vi) const {
   return f(1);
 }
 
-}  // namespace polatory::isosurface
+}  // namespace jizai::isosurface

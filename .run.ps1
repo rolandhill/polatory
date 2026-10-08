@@ -15,7 +15,12 @@ function buildenv() {
         throw 'MSVC is not installed.'
     }
 
-    Invoke-BatchFile "$vsDir\VC\Auxiliary\Build\vcvars64.bat"
+    $vcvars = switch ($env:PROCESSOR_ARCHITECTURE) {
+        'AMD64' { 'vcvars64.bat' }
+        'ARM64' { 'vcvarsarm64.bat' }
+        default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
+    }
+    Invoke-BatchFile "$vsDir\VC\Auxiliary\Build\$vcvars"
 }
 
 if ($args.Length -lt 1) {
@@ -38,11 +43,6 @@ switch -regex ($args[0]) {
     '^t(est)?$' {
         buildenv
         Exec { ctest -V --test-dir build }
-        break
-    }
-    '^configure-on-ci$' {
-        buildenv
-        Exec { cmake -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE='C:/vcpkg/scripts/buildsystems/vcpkg.cmake' }
         break
     }
     default {

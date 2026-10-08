@@ -4,10 +4,10 @@
 #include <algorithm>
 #include <limits>
 #include <numeric>
-#include <polatory/geometry/point3d.hpp>
-#include <polatory/isosurface/triangle.hpp>
-#include <polatory/isosurface/types.hpp>
-#include <polatory/types.hpp>
+#include <jizai/geometry/point3d.hpp>
+#include <jizai/isosurface/triangle.hpp>
+#include <jizai/isosurface/types.hpp>
+#include <jizai/types.hpp>
 #include <utility>
 #include <vector>
 
@@ -15,10 +15,10 @@
 // splitting the faces at the median centroid along the widest axis; queried by branch and bound on
 // the node boxes, so the answer is exact.
 class FaceTree {
-  using Faces = polatory::isosurface::Faces;
-  using Index = polatory::Index;
-  using Point3 = polatory::geometry::Point3;
-  using Points3 = polatory::geometry::Points3;
+  using Faces = jizai::isosurface::Faces;
+  using Index = jizai::Index;
+  using Point3 = jizai::geometry::Point3;
+  using Points3 = jizai::geometry::Points3;
 
   static constexpr Index kLeafSize = 8;
 
@@ -38,7 +38,7 @@ class FaceTree {
     std::iota(order_.begin(), order_.end(), Index{0});
     centroids_.resize(nf, 3);
     for (Index fi = 0; fi < nf; fi++) {
-      centroids_.row(fi) = vertices_(faces_.row(fi), polatory::kAll).colwise().mean();
+      centroids_.row(fi) = vertices_(faces_.row(fi), jizai::kAll).colwise().mean();
     }
     if (nf > 0) {
       nodes_.reserve(2 * (nf / kLeafSize + 1));
@@ -67,7 +67,7 @@ class FaceTree {
     Point3 lo = Point3::Constant(inf);
     Point3 hi = Point3::Constant(-inf);
     for (auto k = begin; k < end; k++) {
-      auto vs = vertices_(faces_.row(order_.at(k)), polatory::kAll);
+      auto vs = vertices_(faces_.row(order_.at(k)), jizai::kAll);
       lo = lo.cwiseMin(vs.colwise().minCoeff());
       hi = hi.cwiseMax(vs.colwise().maxCoeff());
     }
@@ -114,7 +114,7 @@ class FaceTree {
         auto j = order_.at(k);
         auto f = faces_.row(j);
         Point3 c;
-        auto d2 = polatory::isosurface::point_triangle_closest(
+        auto d2 = jizai::isosurface::point_triangle_closest(
             p, vertices_.row(f(0)), vertices_.row(f(1)), vertices_.row(f(2)), c);
         if (d2 < best) {
           best = d2;

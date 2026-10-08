@@ -1,16 +1,16 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <jizai/common/macros.hpp>
+#include <jizai/fmm/fmm_symmetric_evaluator.hpp>
+#include <jizai/point_cloud/kdtree.hpp>
+#include <jizai/types.hpp>
 #include <memory>
-#include <polatory/common/macros.hpp>
-#include <polatory/fmm/fmm_symmetric_evaluator.hpp>
-#include <polatory/point_cloud/kdtree.hpp>
-#include <polatory/types.hpp>
 #include <scalfmm/container/particle.hpp>
 #include <scalfmm/container/particle_container.hpp>
 #include <vector>
 
-namespace polatory::fmm {
+namespace jizai::fmm {
 
 template <class Kernel>
 class FmmGenericSymmetricEvaluator<Kernel>::Impl {
@@ -84,12 +84,12 @@ class FmmGenericSymmetricEvaluator<Kernel>::Impl {
       }
     }
 
-    Points apoints = geometry::transform_points<kDim>(a, points);
-    kdtree_ = std::make_unique<point_cloud::KdTree<kDim>>(apoints);
+    a_points_ = geometry::transform_points<kDim>(a, points);
+    kdtree_ = std::make_unique<point_cloud::KdTree<kDim>>(a_points_);
   }
 
   void set_weights(const Eigen::Ref<const VecX>& weights) {
-    POLATORY_ASSERT(weights.rows() == km * n_points_);
+    JIZAI_ASSERT(weights.rows() == km * n_points_);
 
     for (Index idx = 0; idx < n_points_; idx++) {
       auto p = particles_.at(idx);
@@ -136,6 +136,7 @@ class FmmGenericSymmetricEvaluator<Kernel>::Impl {
 
   Index n_points_{};
   mutable Container particles_;
+  Points a_points_;
   std::unique_ptr<point_cloud::KdTree<kDim>> kdtree_;
 };
 
@@ -175,4 +176,4 @@ void FmmGenericSymmetricEvaluator<Kernel>::set_weights(const Eigen::Ref<const Ve
   IMPLEMENT_FMM_SYMMETRIC_EVALUATORS_(RBF_NAME<2>);  \
   IMPLEMENT_FMM_SYMMETRIC_EVALUATORS_(RBF_NAME<3>);
 
-}  // namespace polatory::fmm
+}  // namespace jizai::fmm

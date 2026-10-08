@@ -1,21 +1,30 @@
 #include <Eigen/LU>
 #include <algorithm>
-#include <polatory/point_cloud/kdtree.hpp>
-#include <polatory/point_cloud/sdf_data_generator.hpp>
+#include <jizai/point_cloud/kdtree.hpp>
+#include <jizai/point_cloud/sdf_data_generator.hpp>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
-namespace polatory::point_cloud {
+namespace jizai::point_cloud {
 
 SdfDataGenerator::SdfDataGenerator(const geometry::Points3& points,
-                                   const geometry::Vectors3& normals, double offset)
+                                   const geometry::Vectors3& normals, std::optional<double> offset)
     : SdfDataGenerator(points, normals, offset, Mat3::Identity()) {}
 
 SdfDataGenerator::SdfDataGenerator(const geometry::Points3& points,
-                                   const geometry::Vectors3& normals, double offset,
+                                   const geometry::Vectors3& normals, const Mat3& aniso)
+    : SdfDataGenerator(points, normals, std::nullopt, aniso) {}
+
+SdfDataGenerator::SdfDataGenerator(const geometry::Points3& points,
+                                   const geometry::Vectors3& normals, std::optional<double> offset,
                                    const Mat3& aniso) {
   if (normals.rows() != points.rows()) {
     throw std::invalid_argument("normals.rows() must be equal to points.rows()");
+  }
+
+  if (offset.has_value() && !(*offset > 0.0)) {
+    throw std::invalid_argument("offset must be positive");
   }
 
   if (!(aniso.determinant() > 0.0)) {
@@ -29,11 +38,6 @@ SdfDataGenerator::SdfDataGenerator(const geometry::Points3& points,
   } else {
     auto a_points = geometry::transform_points<3>(aniso, points);
     auto a_normals = geometry::transform_vectors<3>(aniso.inverse().transpose(), normals);
-    for (auto n : a_normals.rowwise()) {
-      if (!n.isZero()) {
-        n = n.normalized();
-      }
-    }
     auto [sdf_points, sdf_values] = estimate_impl(a_points, a_normals, offset);
     sdf_points_ = geometry::transform_points<3>(aniso.inverse(), sdf_points);
     sdf_values_ = sdf_values;
@@ -41,7 +45,8 @@ SdfDataGenerator::SdfDataGenerator(const geometry::Points3& points,
 }
 
 std::pair<geometry::Points3, VecX> SdfDataGenerator::estimate_impl(
-    const geometry::Points3& points, const geometry::Vectors3& normals, double offset) {
+    const geometry::Points3& points, const geometry::Vectors3& normals,
+    std::optional<double> offset) {
   KdTree tree(points);
 
   auto n_points = points.rows();
@@ -57,17 +62,20 @@ std::pair<geometry::Points3, VecX> SdfDataGenerator::estimate_impl(
 
   for (auto sign : {-1.0, 1.0}) {
     for (Index i = 0; i < n_points; i++) {
-      auto p = points.row(i);
-      auto n = normals.row(i);
+      geometry::Point3 p = points.row(i);
+      geometry::Vector3 n = normals.row(i);
 
       if (n.isZero()) {
         continue;
       }
+      n.normalize();
 
-      auto d = offset;
-      if (d <= 0.0) {
+      double d{};
+      if (offset.has_value()) {
+        d = *offset;
+      } else {
         tree.knn_search(p, std::min(static_cast<Index>(6), n_points), nn_indices, nn_distances);
-        d = *std::max_element(nn_distances.begin(), nn_distances.end());
+        d = *std::ranges::max_element(nn_distances);
       }
       geometry::Point3 q = p + sign * d * n;
 
@@ -102,4 +110,4 @@ const geometry::Points3& SdfDataGenerator::sdf_points() const { return sdf_point
 
 const VecX& SdfDataGenerator::sdf_values() const { return sdf_values_; }
 
-}  // namespace polatory::point_cloud
+}  // namespace jizai::point_cloud

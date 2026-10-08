@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "polatory",
-  "version": "0.1.0",
+  "name": "jizai",
+  "version-string": "1.0.0",
   "dependencies": [
     "boost-algorithm",
     "boost-any",
@@ -16,17 +16,43 @@
     "ceres",
     "eigen3",
     "fast-float",
-    "gtest",
     "nanoflann",
+    "pocketfft",
+    "xsimd",
+    "xtensor",
+    "xtensor-blas",
+    "xtl"
+  ],
+  "default-features": [
     {
       "name": "openblas",
       "platform": "!osx"
     }
   ],
   "features": {
+    "armpl": {
+      "description": "Use Arm Performance Libraries",
+      "dependencies": [
+        "armpl"
+      ]
+    },
+    "openblas": {
+      "description": "Use OpenBLAS",
+      "dependencies": [
+        "openblas"
+      ]
+    },
     "python": {
       "description": "Build Python bindings",
-      "dependencies": ["pybind11"]
+      "dependencies": [
+        "pybind11"
+      ]
+    },
+    "tests": {
+      "description": "Build unit tests",
+      "dependencies": [
+        "gtest"
+      ]
     }
   }
 }

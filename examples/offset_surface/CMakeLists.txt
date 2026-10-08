@@ -3,10 +3,11 @@ set(TARGET offset_surface)
 add_executable(${TARGET} main.cpp)
 
 target_link_libraries(${TARGET} PRIVATE
+    Boost::any
     Boost::program_options
-    polatory
+    jizai
 )
 
 if(MSVC)
-    polatory_target_contents(${TARGET} ${POLATORY_DLLS})
+    jizai_target_contents(${TARGET} ${JIZAI_DLLS})
 endif()

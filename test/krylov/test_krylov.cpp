@@ -1,20 +1,22 @@
 #include <gtest/gtest.h>
 
 #include <Eigen/LU>
+#include <jizai/krylov/fgmres.hpp>
+#include <jizai/krylov/gmres.hpp>
+#include <jizai/krylov/linear_operator.hpp>
+#include <jizai/krylov/minres.hpp>
+#include <jizai/numeric/error.hpp>
+#include <jizai/types.hpp>
 #include <memory>
-#include <polatory/krylov/fgmres.hpp>
-#include <polatory/krylov/gmres.hpp>
-#include <polatory/krylov/linear_operator.hpp>
-#include <polatory/krylov/minres.hpp>
-#include <polatory/types.hpp>
 
-using polatory::Index;
-using polatory::MatX;
-using polatory::VecX;
-using polatory::krylov::Fgmres;
-using polatory::krylov::Gmres;
-using polatory::krylov::LinearOperator;
-using polatory::krylov::Minres;
+using jizai::Index;
+using jizai::MatX;
+using jizai::VecX;
+using jizai::krylov::Fgmres;
+using jizai::krylov::Gmres;
+using jizai::krylov::LinearOperator;
+using jizai::krylov::Minres;
+using jizai::numeric::relative_error;
 
 namespace {
 
@@ -38,6 +40,18 @@ class RandomSymmetric : public LinearOperator {
  private:
   const Index n_;
   MatX m_;
+};
+
+class Identity : public LinearOperator {
+ public:
+  explicit Identity(Index n) : n_(n) {}
+
+  VecX operator()(const VecX& v) const override { return v; }
+
+  Index size() const override { return n_; }
+
+ private:
+  const Index n_;
 };
 
 class Preconditioner : public LinearOperator {
@@ -101,7 +115,8 @@ class KrylovTest : public ::testing::Test {
       auto current_residual = solver.relative_residual();
 
       if (!with_left_pc) {
-        EXPECT_NEAR((rhs - (*op)(approx_solution)).norm() / rhs.norm(), current_residual, 1e-12);
+        EXPECT_NEAR(relative_error((*op)(approx_solution), rhs), current_residual, 1e-12);
+        EXPECT_LT(relative_error(rhs - solver.residual_vector(), (*op)(approx_solution)), 1e-12);
       }
 
       if (i > 0) {
@@ -114,6 +129,19 @@ class KrylovTest : public ::testing::Test {
 };
 
 }  // namespace
+
+TEST_F(KrylovTest, breakdown) {
+  Identity op(n);
+  // Normalizing e0 is exact, so the Arnoldi process breaks down exactly.
+  VecX e0 = VecX::Unit(n, 0);
+  Fgmres solver(op, e0, n);
+  solver.setup();
+  solver.iterate_process();
+
+  EXPECT_EQ(solver.absolute_residual(), 0.0);
+  EXPECT_TRUE(solver.residual_vector().isZero());
+  EXPECT_LT(relative_error(solver.solution_vector(), e0), 1e-15);
+}
 
 TEST_F(KrylovTest, fgmres) {
   test_solver<Fgmres>(false, false, false);

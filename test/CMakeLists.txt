@@ -5,6 +5,8 @@ add_executable(${TARGET}
     common/test_orthonormalize.cpp
     common/test_zip_sort.cpp
     geometry/test_bbox3d.cpp
+    geostats/test_detrend.cpp
+    geostats/test_variogram_calculator.cpp
     interpolation/test_evaluator.cpp
     interpolation/test_fitter.cpp
     interpolation/test_incremental_fitter.cpp
@@ -18,8 +20,6 @@ add_executable(${TARGET}
     isosurface/test_rmt.cpp
     isosurface/test_snap.cpp
     isosurface/test_snap_selfint.cpp
-    kriging/test_detrend.cpp
-    kriging/test_variogram_calculator.cpp
     krylov/test_krylov.cpp
     numeric/test_conv.cpp
     point_cloud/test_distance_filter.cpp
@@ -27,25 +27,26 @@ add_executable(${TARGET}
     point_cloud/test_normal_estimator.cpp
     point_cloud/test_plane_estimator.cpp
     point_cloud/test_sdf_data_generator.cpp
-    polynomial/test_lagrange_basis.cpp
     polynomial/test_polynomial_basis_base.cpp
     preconditioner/test_coarse_grid.cpp
     preconditioner/test_domain_divider.cpp
     preconditioner/test_fine_grid.cpp
+    preconditioner/test_mat_q.cpp
     rbf/test_rbf.cpp
 )
 
 target_link_libraries(${TARGET} PRIVATE
-    GTest::gtest GTest::gtest_main
-    polatory
+    GTest::gtest
+    GTest::gtest_main
+    jizai
 )
 
 target_compile_definitions(${TARGET} PRIVATE
-    POLATORY_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    JIZAI_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
 if(MSVC)
-    polatory_target_contents(${TARGET} ${POLATORY_DLLS})
+    jizai_target_contents(${TARGET} ${JIZAI_DLLS})
 endif()
 
 add_test(

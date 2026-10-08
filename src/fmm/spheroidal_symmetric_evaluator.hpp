@@ -1,16 +1,16 @@
 #pragma once
 
-#include <polatory/common/macros.hpp>
-#include <polatory/fmm/fmm_symmetric_evaluator.hpp>
+#include <jizai/common/macros.hpp>
+#include <jizai/fmm/fmm_symmetric_evaluator.hpp>
 
-namespace polatory::fmm {
+namespace jizai::fmm {
 
 template <class Kernel>
 class FmmGenericSymmetricEvaluator<Kernel>::Impl {
-  using RbfDirectPart = typename Rbf::DirectPart;
-  using RbfFastPart = typename Rbf::FastPart;
-  using KernelDirectPart = typename Kernel::template Rebind<RbfDirectPart>;
-  using KernelFastPart = typename Kernel::template Rebind<RbfFastPart>;
+  using RbfDirectPart = Rbf::DirectPart;
+  using RbfFastPart = Rbf::FastPart;
+  using KernelDirectPart = Kernel::template Rebind<RbfDirectPart>;
+  using KernelFastPart = Kernel::template Rebind<RbfFastPart>;
   static constexpr int km{Kernel::km};
   static constexpr int kn{Kernel::kn};
 
@@ -40,7 +40,7 @@ class FmmGenericSymmetricEvaluator<Kernel>::Impl {
   }
 
   void set_weights(const Eigen::Ref<const VecX>& weights) {
-    POLATORY_ASSERT(weights.rows() == km * n_points_);
+    JIZAI_ASSERT(weights.rows() == km * n_points_);
     direct_eval_.set_weights(weights);
     fast_eval_.set_weights(weights);
   }
@@ -99,4 +99,4 @@ void FmmGenericSymmetricEvaluator<Kernel>::set_weights(const Eigen::Ref<const Ve
   EXTERN_FMM_SYMMETRIC_EVALUATORS_(RBF_NAME<2>);  \
   EXTERN_FMM_SYMMETRIC_EVALUATORS_(RBF_NAME<3>);
 
-}  // namespace polatory::fmm
+}  // namespace jizai::fmm

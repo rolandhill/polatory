@@ -2,33 +2,29 @@
 
 #include <Eigen/Core>
 #include <algorithm>
+#include <jizai/interpolation/direct_evaluator.hpp>
+#include <jizai/model.hpp>
+#include <jizai/numeric/error.hpp>
+#include <jizai/preconditioner/coarse_grid.hpp>
+#include <jizai/preconditioner/domain.hpp>
+#include <jizai/rbf/polyharmonic_odd.hpp>
+#include <jizai/types.hpp>
 #include <numeric>
-#include <polatory/interpolation/direct_evaluator.hpp>
-#include <polatory/model.hpp>
-#include <polatory/numeric/error.hpp>
-#include <polatory/polynomial/lagrange_basis.hpp>
-#include <polatory/preconditioner/coarse_grid.hpp>
-#include <polatory/preconditioner/domain.hpp>
-#include <polatory/rbf/polyharmonic_odd.hpp>
-#include <polatory/types.hpp>
 #include <random>
 #include <utility>
 #include <vector>
 
 #include "../utility.hpp"
 
-using polatory::Index;
-using polatory::kAll;
-using polatory::Mat;
-using polatory::MatX;
-using polatory::Model;
-using polatory::VecX;
-using polatory::interpolation::DirectEvaluator;
-using polatory::numeric::relative_error;
-using polatory::polynomial::LagrangeBasis;
-using polatory::preconditioner::CoarseGrid;
-using polatory::preconditioner::Domain;
-using polatory::rbf::Triharmonic3D;
+using jizai::Index;
+using jizai::Mat;
+using jizai::Model;
+using jizai::VecX;
+using jizai::interpolation::DirectEvaluator;
+using jizai::numeric::relative_error;
+using jizai::preconditioner::CoarseGrid;
+using jizai::preconditioner::Domain;
+using jizai::rbf::Triharmonic3D;
 
 namespace {
 
@@ -36,7 +32,6 @@ template <int Dim>
 void test(Index n_points, Index n_grad_points) {
   constexpr int kDim = Dim;
   using Domain = Domain<kDim>;
-  using LagrangeBasis = LagrangeBasis<kDim>;
   using Mat = Mat<kDim>;
 
   auto relative_tolerance = 1e-8;
@@ -45,7 +40,7 @@ void test(Index n_points, Index n_grad_points) {
   auto [points, values] = sample_data(n_points, aniso);
   auto [grad_points, grad_values] = sample_grad_data(n_grad_points, aniso);
 
-  Triharmonic3D<kDim> rbf({1.0});
+  Triharmonic3D<kDim> rbf;
 
   auto poly_degree = rbf.cpd_order() - 1;
   Model<kDim> model(std::move(rbf), poly_degree);
@@ -72,23 +67,8 @@ void test(Index n_points, Index n_grad_points) {
     domain.grad_point_indices = std::move(grad_indices);
   }
 
-  MatX lagrange_p;
-  if (l > 0) {
-    if (poly_degree == 1 && mu == 1 && sigma >= 1) {
-      // The special case.
-      LagrangeBasis lagrange_basis(poly_degree, points, grad_points.topRows(1));
-      lagrange_p = lagrange_basis.evaluate(points, grad_points);
-    } else {
-      // The ordinary case.
-      std::vector<Index> poly_point_idcs(domain.point_indices.begin(),
-                                         domain.point_indices.begin() + l);
-      LagrangeBasis lagrange_basis(poly_degree, points(poly_point_idcs, kAll));
-      lagrange_p = lagrange_basis.evaluate(points, grad_points);
-    }
-  }
-
   CoarseGrid<kDim> coarse(model, std::move(domain));
-  coarse.setup(points, grad_points, lagrange_p);
+  coarse.setup(points, grad_points);
 
   VecX rhs = VecX(mu + kDim * sigma);
   rhs << values, grad_values.template reshaped<Eigen::RowMajor>();

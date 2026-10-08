@@ -3,33 +3,34 @@
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <jizai/isosurface/mesh.hpp>
+#include <jizai/isosurface/triangle.hpp>
+#include <jizai/jizai.hpp>
 #include <limits>
-#include <polatory/isosurface/mesh.hpp>
-#include <polatory/isosurface/triangle.hpp>
-#include <polatory/polatory.hpp>
+#include <stdexcept>
 #include <utility>
 
 #include "face_tree.hpp"
 #include "parse_options.hpp"
 
-using polatory::Index;
-using polatory::Interpolant;
-using polatory::kAll;
-using polatory::MatX;
-using polatory::Model;
-using polatory::read_table;
-using polatory::VecX;
-using polatory::geometry::Bbox3;
-using polatory::geometry::Point3;
-using polatory::geometry::Points3;
-using polatory::geometry::Vector3;
-using polatory::isosurface::barycentric_coordinates;
-using polatory::isosurface::Face;
-using polatory::isosurface::Faces;
-using polatory::isosurface::FieldFunction;
-using polatory::isosurface::Isosurface;
-using polatory::isosurface::read_obj;
-using polatory::rbf::Biharmonic3D;
+using jizai::Index;
+using jizai::Interpolant;
+using jizai::kAll;
+using jizai::MatX;
+using jizai::Model;
+using jizai::read_table;
+using jizai::VecX;
+using jizai::geometry::Bbox3;
+using jizai::geometry::Point3;
+using jizai::geometry::Points3;
+using jizai::geometry::Vector3;
+using jizai::isosurface::barycentric_coordinates;
+using jizai::isosurface::Face;
+using jizai::isosurface::Faces;
+using jizai::isosurface::FieldFunction;
+using jizai::isosurface::Isosurface;
+using jizai::isosurface::read_obj;
+using jizai::rbf::Biharmonic3D;
 
 class SignedDistanceField {
   using Halfedge = std::pair<Index, Index>;
@@ -119,7 +120,7 @@ class SignedDistanceField {
 };
 
 class OffsetFieldFunction : public FieldFunction {
-  using Interpolant = polatory::Interpolant<3>;
+  using Interpolant = jizai::Interpolant<3>;
 
  public:
   explicit OffsetFieldFunction(Interpolant& interpolant, const SignedDistanceField& sdf,
@@ -173,7 +174,7 @@ int main(int argc, const char* argv[]) {
     }
 
     // Define the model.
-    Biharmonic3D<3> rbf({1.0});
+    Biharmonic3D<3> rbf;
     Model<3> model(std::move(rbf));
 
     // Fit.

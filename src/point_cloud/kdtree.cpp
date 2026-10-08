@@ -2,14 +2,14 @@
 #include <cmath>
 #include <functional>
 #include <iterator>
+#include <jizai/point_cloud/kdtree.hpp>
 #include <limits>
 #include <memory>
 #include <nanoflann.hpp>
-#include <polatory/point_cloud/kdtree.hpp>
 #include <stdexcept>
 #include <vector>
 
-namespace polatory::point_cloud {
+namespace jizai::point_cloud {
 
 template <int Dim>
 class KdTree<Dim>::Impl {
@@ -19,7 +19,7 @@ class KdTree<Dim>::Impl {
       nanoflann::KDTreeEigenMatrixAdaptor<Points, Dim, nanoflann::metric_L2_Simple>;
 
  public:
-  explicit Impl(const Points& points) : points_{points}, nf_index_{Dim, std::cref(points_)} {}
+  explicit Impl(const Points& points) : nf_index_{Dim, std::cref(points)} {}
 
   void knn_search(const Point& point, Index k, std::vector<Index>& indices,
                   std::vector<double>& distances) const {
@@ -39,7 +39,6 @@ class KdTree<Dim>::Impl {
     using DistanceType = double;
     using IndexType = Index;
 
-   public:
     KNNResultSet(std::size_t k, std::vector<IndexType>& indices,
                  std::vector<DistanceType>& distances)
         : k_{k},
@@ -52,7 +51,7 @@ class KdTree<Dim>::Impl {
 
     bool addPoint(DistanceType dist, IndexType index) {
       dist = std::sqrt(dist);
-      auto it = std::upper_bound(distances_.begin(), distances_.end(), dist);
+      auto it = std::ranges::upper_bound(distances_, dist);
       auto i = static_cast<std::size_t>(std::distance(distances_.begin(), it));
       if (i < k_) {
         if (full()) {
@@ -130,7 +129,6 @@ class KdTree<Dim>::Impl {
     std::vector<DistanceType>& distances_;
   };
 
-  Points points_;
   NanoflannIndex nf_index_;
 };
 
@@ -173,4 +171,4 @@ template class KdTree<1>;
 template class KdTree<2>;
 template class KdTree<3>;
 
-}  // namespace polatory::point_cloud
+}  // namespace jizai::point_cloud

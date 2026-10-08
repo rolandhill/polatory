@@ -1,6 +1,373 @@
 #!/usr/bin/env python3
 
-import polatory
-import polatory.one
-import polatory.three
-import polatory.two
+import gc
+import os
+import tempfile
+
+import numpy as np
+import jizai
+
+DIMS = [1, 2, 3]
+
+RBF_NAMES = [
+    "Biharmonic2D",
+    "Biharmonic3D",
+    "CovCubic",
+    "CovExponential",
+    "CovGaussian",
+    "CovGeneralizedCauchy3",
+    "CovGeneralizedCauchy5",
+    "CovGeneralizedCauchy7",
+    "CovGeneralizedCauchy9",
+    "CovSpherical",
+    "CovSpheroidal3",
+    "CovSpheroidal5",
+    "CovSpheroidal7",
+    "CovSpheroidal9",
+    "Triharmonic2D",
+    "Triharmonic3D",
+]
+
+rng = np.random.default_rng(0)
+
+
+def assert_raises(exc_type, fn, *args):
+    try:
+        fn(*args)
+    except exc_type:
+        return
+    raise AssertionError(f"{exc_type.__name__} not raised")
+
+
+def min_pairwise_distance(points):
+    d = np.linalg.norm(points[:, None] - points[None], axis=2)
+    np.fill_diagonal(d, np.inf)
+    return d.min()
+
+
+def test_bbox(dim):
+    points = rng.random((100, dim))
+    bbox = jizai.Bbox.from_points(points)
+    assert bbox.dim == dim
+    assert not bbox.is_empty
+    assert np.array_equal(bbox.min, points.min(axis=0))
+    assert np.array_equal(bbox.max, points.max(axis=0))
+    assert jizai.Bbox(dim=dim).is_empty
+
+    bbox = jizai.Bbox(np.zeros(dim), np.ones(dim))
+    assert np.array_equal(bbox.max, np.ones(dim))
+    assert_raises(ValueError, jizai.Bbox, np.zeros(dim), np.ones(dim + 1))
+
+
+def test_rbfs(dim):
+    diff = np.full(dim, 0.1)
+    for name in RBF_NAMES:
+        params = [1.0] if name.endswith(("2D", "3D")) else [1.0, 0.5]
+        rbf = getattr(jizai, name)(params, dim=dim)
+        assert rbf.dim == dim
+        assert rbf.parameters[: len(params)] == params
+        assert rbf.num_parameters == len(rbf.parameter_names)
+        assert rbf.num_parameters == len(rbf.parameter_lower_bounds)
+        assert rbf.num_parameters == len(rbf.parameter_upper_bounds)
+        assert rbf.is_covariance_function == name.startswith("Cov")
+        assert rbf.cpd_order >= 0
+        assert rbf.short_name
+
+        rbf.evaluate(diff)
+        rbf.evaluate_gradient(diff)
+        try:
+            rbf.evaluate_hessian(diff)
+        except RuntimeError as e:
+            assert "not implemented" in str(e)
+
+        aniso = rbf.anisotropy
+        aniso.flat[0] = 2.0
+        assert rbf.anisotropy.flat[0] == 1.0
+        rbf.anisotropy = aniso
+        assert rbf.anisotropy.flat[0] == 2.0
+
+    assert_raises(ValueError, lambda: jizai.CovExponential([1.0], dim=dim))
+
+
+def test_model(dim, tmp):
+    model = jizai.Model(
+        [jizai.CovExponential(1.0, 0.5, dim=dim), jizai.CovGaussian(2.0, 0.7, dim=dim)]
+    )
+    model.nugget = 0.1
+    assert model.dim == dim
+    assert model.is_covariance_model
+    assert model.num_rbfs == 2
+    assert model.parameters == [0.1, 1.0, 0.5, 2.0, 0.7]
+    assert model.parameter_names == ["nugget", "psill", "range", "psill", "range"]
+    assert len(model.parameter_lower_bounds) == model.num_parameters
+    assert len(model.parameter_upper_bounds) == model.num_parameters
+    assert model.description
+
+    model.rbfs[0].parameters = [3.0, 0.9]
+    assert model.parameters == [0.1, 1.0, 0.5, 2.0, 0.7]
+
+    anisos = model.anisotropies
+    assert len(anisos) == 2 and anisos[0].shape == (dim, dim)
+    anisos[0][0, 0] = 2.0
+    model.anisotropies = anisos
+    assert model.rbfs[0].anisotropy[0, 0] == 2.0
+    assert_raises(ValueError, setattr, model, "anisotropies", anisos[:1])
+
+    path = os.path.join(tmp, f"model{dim}")
+    model.save(path)
+    assert jizai.Model.load(path, dim=dim).parameters == model.parameters
+
+    model = jizai.Model(
+        [jizai.CovExponential(1.0, 0.5, dim=dim), jizai.Biharmonic3D(dim=dim)]
+    )
+    assert not model.is_covariance_model
+    assert_raises(RuntimeError, lambda: model.description)
+
+    model = jizai.Model(jizai.Biharmonic3D(dim=dim), poly_degree=1)
+    assert model.poly_degree == 1
+    assert model.poly_basis_size > 0
+    assert model.cpd_order == 1
+    assert jizai.Model(jizai.Biharmonic3D(dim=dim)).poly_degree == 0
+    other_dim = dim % 3 + 1
+    assert_raises(
+        ValueError,
+        jizai.Model,
+        [jizai.Biharmonic3D(dim=dim), jizai.Biharmonic3D(dim=other_dim)],
+    )
+
+
+def test_interpolant(dim, tmp):
+    points = rng.random((200, dim))
+    values = np.sin(3.0 * points.sum(axis=1))
+    grad_points = points[:10]
+    grad_values = np.repeat(3.0 * np.cos(3.0 * grad_points.sum(axis=1)), dim).reshape(
+        -1, dim
+    )
+
+    # Biharmonic3D reduces to |x| in 1D, which cannot fit gradients.
+    interp = jizai.Interpolant(jizai.Model(jizai.Triharmonic3D(dim=dim), poly_degree=1))
+    assert interp.dim == dim
+    interp.fit(points, values, 1e-6)
+    assert np.abs(interp.evaluate(points) - values).max() < 1e-5
+    eval_values, eval_grads = interp.evaluate(points, grad_points)
+    assert eval_values.shape == values.shape
+    assert eval_grads.size == grad_values.size
+
+    weights = interp.weights
+    weights[0] += 1.0
+    assert interp.weights[0] != weights[0]
+    centers = interp.centers
+    centers.flat[0] += 1.0
+    assert interp.centers.flat[0] != centers.flat[0]
+    interp.model.nugget = 1.0
+    assert interp.model.nugget == 0.0
+    assert interp.grad_centers.size == 0
+    assert np.array_equal(interp.bbox.min, points.min(axis=0))
+
+    interp.fit(points, grad_points, values, grad_values, 1e-6, 1e-6, initial=interp)
+    eval_values, eval_grads = interp.evaluate(points, grad_points)
+    assert np.abs(eval_values - values).max() < 1e-5
+    assert np.abs(eval_grads.reshape(grad_values.shape) - grad_values).max() < 1e-5
+    interp.fit_incrementally(points, values, 1e-6)
+    interp.fit_incrementally(points, grad_points, values, grad_values, 1e-6, 1e-6)
+    nan = np.full(len(values), np.nan)
+    interp.fit_inequality(points, values, nan, nan, 1e-6)
+
+    path = os.path.join(tmp, f"interpolant{dim}")
+    interp.save(path)
+    assert np.array_equal(jizai.Interpolant.load(path, dim=dim).weights, interp.weights)
+    assert_raises(ValueError, interp.evaluate, rng.random((10, dim % 3 + 1)))
+
+
+def test_distance_filter(dim):
+    points = rng.random((1000, dim))
+    distance = 0.05 if dim > 1 else 0.001
+
+    f = jizai.DistanceFilter(points)
+    assert f.dim == dim
+    indices = f.filtered_indices(distance)
+    assert 0 < len(indices) <= len(points)
+    assert min_pairwise_distance(points[indices]) >= distance
+
+    subset = list(range(0, len(points), 2))
+    indices = f.filtered_indices(distance, subset)
+    assert set(indices) <= set(subset)
+    assert min_pairwise_distance(points[indices]) >= distance
+
+    assert_raises(ValueError, f.filtered_indices, distance, [0, len(points)])
+    assert_raises(ValueError, f.filtered_indices, distance, [-1])
+
+
+def test_geostats(dim, tmp):
+    points = rng.random((200, dim))
+    values = np.sin(3.0 * points.sum(axis=1))
+
+    calc = jizai.VariogramCalculator(0.1, 5, dim=dim)
+    calc.angle_tolerance = None
+    calc.lag_tolerance = None
+    calc.directions = jizai.VariogramCalculator.anisotropic_directions(dim=dim)
+    directions = calc.directions
+    expected = directions.copy()
+    calc.directions = jizai.VariogramCalculator.isotropic_directions(dim=dim)
+    assert np.array_equal(directions, expected)
+
+    variog_set = calc.calculate(points, values)
+    assert variog_set.num_variograms == 1
+    variog = variog_set.variograms[0]
+    assert len(variog.bin_distance) == variog.num_bins
+    assert len(variog.bin_gamma) == variog.num_bins
+    assert sum(variog.bin_num_pairs) == variog.num_pairs
+    assert variog.direction.shape == (dim,)
+
+    path = os.path.join(tmp, f"variog_set{dim}")
+    variog_set.save(path)
+    assert jizai.VariogramSet.load(path, dim=dim).num_pairs == variog_set.num_pairs
+
+    fit = jizai.VariogramFitting(
+        variog_set,
+        jizai.Model(jizai.CovExponential(1.0, 0.5, dim=dim), poly_degree=-1),
+        jizai.WeightFunction.NUM_PAIRS,
+        fit_anisotropy=dim > 1,
+    )
+    assert fit.brief_report and fit.full_report
+    assert fit.final_cost >= 0.0
+    assert fit.model.num_rbfs == 1
+
+    nst = jizai.NormalScoreTransformation()
+    y = nst.transform(values)
+    assert abs(y.mean()) < 1e-6 and abs(y.std() - 1.0) < 1e-2
+    assert np.corrcoef(nst.back_transform(y), values)[0, 1] > 0.99
+    variog_set.back_transform(nst)
+    variog.back_transform(nst)
+
+    set_ids = np.arange(len(points)) % 5
+    model = jizai.Model(jizai.CovExponential(1.0, 0.5, dim=dim), poly_degree=0)
+    assert (
+        jizai.cross_validate(model, points, values, set_ids, 1e-6).shape == values.shape
+    )
+    assert jizai.detrend(points, values, 1).shape == values.shape
+
+
+def sphere_points(n):
+    points = rng.normal(size=(n, 3))
+    return points / np.linalg.norm(points, axis=1, keepdims=True)
+
+
+def test_normal_estimator():
+    points = sphere_points(500)
+    up = np.array([0.0, 0.0, 1.0])
+
+    ne = jizai.NormalEstimator(points)
+    ne.estimate_with_knn(20)
+    ne.orient_toward_direction(up)
+    assert (ne.normals @ up).min() >= 0.0
+    ne.estimate_with_knn([10, 20])
+    ne.filter_by_plane_factor()
+    ne.orient_closed_surface()
+    ne.estimate_with_radius(0.3)
+    ne.orient_toward_point(np.zeros(3))
+    ne.estimate_with_radius([0.2, 0.3])
+    ne.filter_by_plane_factor(1.8)
+    ne.orient_closed_surface(50)
+    assert ne.normals.shape == (500, 3)
+    assert ne.plane_factors.shape == (500,)
+
+    normals = ne.normals
+    expected = normals.copy()
+    normals[:] = 7.0
+    assert np.array_equal(ne.normals, expected)
+
+    sdf = jizai.SdfDataGenerator(points, ne.normals, 0.1)
+    assert len(sdf.sdf_points) == len(sdf.sdf_values)
+    sdf = jizai.SdfDataGenerator(points, ne.normals, 0.1, np.eye(3))
+    assert len(sdf.sdf_points) == len(sdf.sdf_values)
+
+
+def fit_plane_interpolant():
+    points = rng.random((200, 3))
+    interp = jizai.Interpolant(jizai.Model(jizai.Biharmonic3D(dim=3), poly_degree=1))
+    interp.fit(points, points[:, 0] - 0.5, 1e-6)
+    return interp
+
+
+def test_isosurface(tmp):
+    bbox = jizai.Bbox(np.zeros(3), np.ones(3))
+    interp = fit_plane_interpolant()
+    field_fn = jizai.RbfFieldFunction(interp)
+
+    mesh = jizai.Isosurface(bbox, 0.1).generate(field_fn)
+    assert mesh.faces.shape[0] > 0
+    assert not mesh.is_empty and not mesh.is_entire
+    assert np.abs(mesh.vertices[:, 0] - 0.5).max() < 1e-6
+    mesh.export_obj(os.path.join(tmp, "mesh.obj"))
+
+    mesh = jizai.Isosurface(bbox, 0.1).generate(field_fn, isovalue=1.0)
+    assert mesh.is_entire and not mesh.is_empty and mesh.faces.shape[0] == 0
+    mesh = jizai.Isosurface(bbox, 0.1).generate(field_fn, isovalue=-1.0)
+    assert mesh.is_empty and not mesh.is_entire and mesh.faces.shape[0] == 0
+
+    iso = jizai.Isosurface(bbox, 0.1, np.eye(3))
+    snap_points = np.column_stack([np.full(5, 0.5), rng.random((5, 2))])
+    iso.set_snap_points(snap_points)
+    iso.set_snap_points(snap_points, np.full(5, 0.5))
+    seed_points = np.array([[0.5, 0.5, 0.5]])
+    field_fn = jizai.RbfFieldFunction(interp, 1e-6, 1e-5)
+    mesh = iso.generate_from_seed_points(
+        seed_points, field_fn, isovalue=0.0, refine=False
+    )
+    assert mesh.faces.shape[0] > 0
+
+
+def test_isosurface_25d():
+    points = rng.random((100, 2))
+    interp = jizai.Interpolant(jizai.Model(jizai.Biharmonic2D(dim=2)))
+    interp.fit(points, 0.1 * points.sum(axis=1), 1e-6)
+
+    bbox = jizai.Bbox(np.array([0.0, 0.0, -1.0]), np.array([1.0, 1.0, 1.0]))
+    mesh = jizai.Isosurface(bbox, 0.1).generate(jizai.RbfFieldFunction25D(interp))
+    assert mesh.faces.shape[0] > 0
+
+
+def test_field_function_keeps_interpolant_alive():
+    field_fn = jizai.RbfFieldFunction(fit_plane_interpolant())
+    gc.collect()
+    model = jizai.Model(jizai.Biharmonic3D(dim=3))
+    garbage = [jizai.Interpolant(model) for i in range(1000)]
+
+    bbox = jizai.Bbox(np.zeros(3), np.ones(3))
+    mesh = jizai.Isosurface(bbox, 0.1).generate(field_fn)
+    assert np.abs(mesh.vertices[:, 0] - 0.5).max() < 1e-6
+
+
+def test_weight_function():
+    jizai.WeightFunction(1.0, 0.0, 1.0)
+    for name in [
+        "NUM_PAIRS",
+        "NUM_PAIRS_OVER_DISTANCE_SQUARED",
+        "NUM_PAIRS_OVER_MODEL_GAMMA_SQUARED",
+        "ONE",
+        "ONE_OVER_DISTANCE_SQUARED",
+        "ONE_OVER_MODEL_GAMMA_SQUARED",
+    ]:
+        assert isinstance(getattr(jizai.WeightFunction, name), jizai.WeightFunction)
+
+
+def main():
+    with tempfile.TemporaryDirectory() as tmp:
+        for dim in DIMS:
+            test_bbox(dim)
+            test_rbfs(dim)
+            test_model(dim, tmp)
+            test_interpolant(dim, tmp)
+            test_distance_filter(dim)
+            test_geostats(dim, tmp)
+        test_normal_estimator()
+        test_isosurface(tmp)
+        test_isosurface_25d()
+        test_field_function_keeps_interpolant_alive()
+        test_weight_function()
+    print("All tests passed.")
+
+
+if __name__ == "__main__":
+    main()

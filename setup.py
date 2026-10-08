@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 
 from setuptools import Extension, setup
@@ -38,25 +39,31 @@ class CMakeBuild(build_ext):
             ).resolve()
         except subprocess.CalledProcessError:
             raise OSError("MSVC is not installed.")
-        vcvars64 = (vs_dir / "VC/Auxiliary/Build/vcvars64.bat").resolve()
+        match sysconfig.get_platform():
+            case "win-amd64":
+                vcvars_name = "vcvars64.bat"
+            case "win-arm64":
+                vcvars_name = "vcvarsarm64.bat"
+            case platform:
+                raise OSError(f"Unsupported platform: {platform}")
+        vcvars = (vs_dir / "VC/Auxiliary/Build" / vcvars_name).resolve()
 
         output = subprocess.run(
-            f'"{vcvars64}" && set', stdout=subprocess.PIPE, check=True, text=True
+            f'"{vcvars}" && set', stdout=subprocess.PIPE, check=True, text=True
         ).stdout
 
         env = {}
         for line in output.splitlines():
             pair = line.split("=", 1)
             if len(pair) >= 2:
-                env[pair[0]] = pair[1]
+                env[pair[0].upper()] = pair[1]
         return env
 
     def build_extension(self, ext: CMakeExtension) -> None:
+        lib_dir = (Path.cwd() / self.get_ext_fullpath(ext.name)).parent.resolve()
+        out_dir = lib_dir / ext.name
         toolchain_file = (
             Path.cwd() / "vcpkg/scripts/buildsystems/vcpkg.cmake"
-        ).resolve()
-        out_dir = (
-            (Path.cwd() / self.get_ext_fullpath(ext.name)).parent / ext.name
         ).resolve()
 
         cmake_args = [
@@ -69,7 +76,9 @@ class CMakeBuild(build_ext):
             "-DBUILD_EXAMPLES=OFF",
             "-DBUILD_PYTHON_BINDINGS=ON",
             "-DBUILD_TESTS=OFF",
-            f"-DPOLATORY_VERSION={version}",
+            f"-DJIZAI_VERSION={version}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            "--compile-no-warning-as-error",
         ]
 
         env = os.environ.copy()
@@ -82,6 +91,8 @@ class CMakeBuild(build_ext):
                 env["CC"] = f"{brew_prefix}/opt/llvm/bin/clang"
             if "CXX" not in env:
                 env["CXX"] = f"{brew_prefix}/opt/llvm/bin/clang++"
+            if "LDFLAGS" not in env:
+                env["LDFLAGS"] = f"-L{brew_prefix}/opt/llvm/lib/c++"
         elif sys.platform == "linux":
             if "CC" not in env:
                 env["CC"] = "clang"
@@ -97,6 +108,9 @@ class CMakeBuild(build_ext):
         build_temp_dir.mkdir(parents=True, exist_ok=True)
 
         cmake = shutil.which("cmake", path=env["PATH"])
+        if cmake is None:
+            raise OSError("CMake is not installed.")
+
         subprocess.run(
             [cmake, ext.src_dir, *cmake_args],
             cwd=build_temp_dir,
@@ -109,14 +123,24 @@ class CMakeBuild(build_ext):
             check=True,
             env=env,
         )
+        subprocess.run(
+            [sys.executable, "-m", "pybind11_stubgen", "-o", lib_dir, ext.name],
+            check=True,
+            env={
+                **env,
+                "PYTHONPATH": os.pathsep.join(
+                    filter(None, [os.fspath(lib_dir), env.get("PYTHONPATH")])
+                ),
+            },
+        )
 
 
 with open(Path.cwd() / "vcpkg.json") as f:
     vcpkg_json = json.load(f)
-    version = vcpkg_json["version"]
+    version = vcpkg_json["version-string"]
 
 setup(
     version=version,
-    ext_modules=[CMakeExtension("polatory")],
+    ext_modules=[CMakeExtension("jizai")],
     cmdclass={"build_ext": CMakeBuild},
 )

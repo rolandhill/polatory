@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 
-#include <polatory/geometry/point3d.hpp>
-#include <polatory/point_cloud/distance_filter.hpp>
-#include <polatory/types.hpp>
+#include <jizai/geometry/point3d.hpp>
+#include <jizai/point_cloud/distance_filter.hpp>
+#include <jizai/types.hpp>
 #include <vector>
 
-using polatory::Index;
-using polatory::geometry::Point3;
-using polatory::geometry::Points3;
-using polatory::point_cloud::DistanceFilter;
+using jizai::Index;
+using jizai::geometry::Point3;
+using jizai::geometry::Points3;
+using jizai::point_cloud::DistanceFilter;
 
 TEST(distance_filter, trivial) {
   Points3 points(9, 3);
@@ -16,11 +16,10 @@ TEST(distance_filter, trivial) {
       Point3(1, 0, 0), Point3(2, 0, 0), Point3(2, 0, 0), Point3(2, 0, 0);
 
   DistanceFilter filter(points);
-  filter.filter(0.5);
 
   std::vector<Index> expected_filtered_indices{0, 3, 6};
 
-  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices());
+  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices(0.5));
 }
 
 TEST(distance_filter, filter_distance) {
@@ -29,11 +28,10 @@ TEST(distance_filter, filter_distance) {
       Point3(0, 2, 0), Point3(0, 0, 2);
 
   DistanceFilter filter(points);
-  filter.filter(1.5);
 
   std::vector<Index> expected_filtered_indices{0, 4, 5, 6};
 
-  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices());
+  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices(1.5));
 }
 
 TEST(distance_filter, non_trivial_indices) {
@@ -44,9 +42,8 @@ TEST(distance_filter, non_trivial_indices) {
   std::vector<Index> indices{8, 7, 6, 5, 4, 3, 2, 1};
 
   DistanceFilter filter(points);
-  filter.filter(0.5, indices);
 
   std::vector<Index> expected_filtered_indices{8, 5, 2};
 
-  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices());
+  EXPECT_EQ(expected_filtered_indices, filter.filtered_indices(0.5, indices));
 }

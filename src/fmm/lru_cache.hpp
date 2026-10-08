@@ -4,14 +4,14 @@
 #include <unordered_map>
 #include <utility>
 
-namespace polatory::fmm {
+namespace jizai::fmm {
 
 template <class Key, class T>
 class LruCache {
   using KeyValuePair = std::pair<const Key, T>;
   using List = std::list<KeyValuePair>;
-  using Iterator = typename List::iterator;
-  using ConstIterator = typename List::const_iterator;
+  using Iterator = List::iterator;
+  using ConstIterator = List::const_iterator;
 
  public:
   explicit LruCache(std::size_t capacity) : capacity_{capacity} {}
@@ -76,4 +76,4 @@ class LruCache {
   std::unordered_map<Key, Iterator> map_;
 };
 
-}  // namespace polatory::fmm
+}  // namespace jizai::fmm
