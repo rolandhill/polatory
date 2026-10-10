@@ -1,5 +1,6 @@
 #pragma once
 
+#include <jizai/log.hpp>
 #include <Eigen/Core>
 #include <algorithm>
 #include <boost/unordered/unordered_flat_set.hpp>
@@ -72,9 +73,9 @@ class InequalityFitter {
     std::set<Index> active_ub_idcs;
 
     while (true) {
-      std::cout << "Active lower bounds: " << active_lb_idcs.size() << " / " << lb_idcs.size()
+      log_stream() << "Active lower bounds: " << active_lb_idcs.size() << " / " << lb_idcs.size()
                 << std::endl;
-      std::cout << "Active upper bounds: " << active_ub_idcs.size() << " / " << ub_idcs.size()
+      log_stream() << "Active upper bounds: " << active_ub_idcs.size() << " / " << ub_idcs.size()
                 << std::endl;
 
       // Update centers (equality points + active inequality points).

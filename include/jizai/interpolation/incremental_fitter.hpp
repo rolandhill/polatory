@@ -1,5 +1,6 @@
 #pragma once
 
+#include <jizai/log.hpp>
 #include <Eigen/Core>
 #include <algorithm>
 #include <boost/unordered/unordered_flat_set.hpp>
@@ -71,10 +72,10 @@ class IncrementalFitter {
 
     while (true) {
       if (mu_full_ > 0) {
-        std::cout << std::format("Number of RBF centers: {} / {}", mu, mu_full_) << std::endl;
+        log_stream() << std::format("Number of RBF centers: {} / {}", mu, mu_full_) << std::endl;
       }
       if (sigma_full_ > 0) {
-        std::cout << std::format("Number of grad RBF centers: {} / {}", sigma, sigma_full_)
+        log_stream() << std::format("Number of grad RBF centers: {} / {}", sigma, sigma_full_)
                   << std::endl;
       }
 
@@ -123,7 +124,7 @@ class IncrementalFitter {
       auto lb = std::lower_bound(c_residuals.begin(), c_residuals.end(), tolerance);
       auto n_points_need_fitting = static_cast<Index>(std::distance(lb, c_residuals.end()));
       if (mu_full_ > 0) {
-        std::cout << "Number of points to fit: " << n_points_need_fitting << std::endl;
+        log_stream() << "Number of points to fit: " << n_points_need_fitting << std::endl;
       }
 
       auto grad_lb =
@@ -131,7 +132,7 @@ class IncrementalFitter {
       auto n_grad_points_need_fitting =
           static_cast<Index>(std::distance(grad_lb, c_grad_residuals.end()));
       if (sigma_full_ > 0) {
-        std::cout << "Number of grad points to fit: " << n_grad_points_need_fitting << std::endl;
+        log_stream() << "Number of grad points to fit: " << n_grad_points_need_fitting << std::endl;
       }
 
       if (n_points_need_fitting == 0 && n_grad_points_need_fitting == 0) {

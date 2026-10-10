@@ -1,3 +1,4 @@
+#include <jizai/log.hpp>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -264,7 +265,7 @@ void NormalEstimator::orient_closed_surface(Index k) {
     n_connected_components++;
   }
 
-  std::cout << "Number of connected components: " << n_connected_components << std::endl;
+  log_stream() << "Number of connected components: " << n_connected_components << std::endl;
 }
 
 }  // namespace jizai::point_cloud

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <jizai/log.hpp>
 #include <Eigen/Core>
 #include <iomanip>
 #include <iostream>
@@ -102,7 +103,7 @@ class Solver {
 
     res_eval_.set_values(values);
 
-    std::cout << std::setw(8) << "iter"            //
+    log_stream() << std::setw(8) << "iter"            //
               << std::setw(16) << "residual"       //
               << std::setw(16) << "grad_residual"  //
               << std::endl;
@@ -117,7 +118,7 @@ class Solver {
 
       auto prefix = convergence.exact_residual ? "" : "~";
       auto grad_prefix = convergence.exact_grad_residual ? "" : "~";
-      std::cout << std::scientific                                                            //
+      log_stream() << std::scientific                                                            //
                 << std::setw(8) << solver.iteration_count()                                   //
                 << std::setw(4) << prefix << std::setw(12) << convergence.residual            //
                 << std::setw(4) << grad_prefix << std::setw(12) << convergence.grad_residual  //

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <jizai/log.hpp>
 #include <Eigen/Core>
 #include <boost/container_hash/hash.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
@@ -241,7 +242,7 @@ class Interpolant {
     VecX weights = VecX::Zero(mu + kDim * sigma + l);
 
     if (model() != initial.model()) {
-      std::cerr << "warning: ignoring the initial interpolant because the model is different"
+      log_stream() << "warning: ignoring the initial interpolant because the model is different"
                 << std::endl;
       return weights;
     }
